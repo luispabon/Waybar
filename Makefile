@@ -7,10 +7,12 @@ build-disco-image:
 	docker build -t waybar_build .
 
 # Run outside container
-build-and-copy-to-bin:
+build-disco:
 	docker run -t --rm -v $(shell pwd):/workdir -w "/workdir" waybar_build sh -c "meson build; ninja -C build"
 	sudo chown $(shell id -u):$(shell id -g) . -Rf
-	cp build/waybar ~/bin/
+
+bin-install:
+	ln -s $(PWD)/build/waybar ~/bin/
 
 # Run in-container
 build:
