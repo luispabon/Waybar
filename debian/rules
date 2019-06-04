@@ -13,7 +13,7 @@ export CFLAGS = -Wno-error=date-time
 
 .PHONY: override_dh_auto_configure
 override_dh_auto_configure:
-	dh_auto_configure -- --libexecdir=lib
+	dh_auto_configure -- --libexecdir=lib --wrap-mode=forcefallback
 
 .PHONY: override_dh_missing
 override_dh_missing:
