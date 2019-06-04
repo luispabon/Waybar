@@ -25,14 +25,14 @@ void waybar::modules::Custom::delayWorker() {
   thread_ = [this] {
     bool can_update = true;
     if (config_["exec-if"].isString()) {
-      auto res = waybar::util::command::exec(config_["exec-if"].asString());
+      auto res = util::command::exec(config_["exec-if"].asString());
       if (res.exit_code != 0) {
         can_update = false;
         event_box_.hide();
       }
     }
     if (can_update) {
-      output_ = waybar::util::command::exec(config_["exec"].asString());
+      output_ = util::command::exec(config_["exec"].asString());
       dp.emit();
     }
     thread_.sleep_for(interval_);
@@ -102,14 +102,14 @@ auto waybar::modules::Custom::update() -> void {
     } else {
       parseOutputRaw();
     }
-    if (text_.empty()) {
+    auto str = fmt::format(format_,
+                           text_,
+                           fmt::arg("alt", alt_),
+                           fmt::arg("icon", getIcon(percentage_, alt_)),
+                           fmt::arg("percentage", percentage_));
+    if (str.empty()) {
       event_box_.hide();
     } else {
-      auto str = fmt::format(format_,
-                             text_,
-                             fmt::arg("alt", alt_),
-                             fmt::arg("icon", getIcon(percentage_, alt_)),
-                             fmt::arg("percentage", percentage_));
       label_.set_markup(str);
       if (tooltipEnabled()) {
         if (text_ == tooltip_) {
