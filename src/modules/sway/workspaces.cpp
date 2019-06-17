@@ -80,6 +80,7 @@ void Workspaces::onCmd(const struct Ipc::ipc_response &res) {
               // Adding to all outputs
               Json::Value v;
               v["name"] = p_w_name;
+              v["target_output"] = "";
               workspaces_.emplace_back(std::move(v));
             }
           }
@@ -153,6 +154,11 @@ auto Workspaces::update() -> void {
       button.get_style_context()->add_class("urgent");
     } else {
       button.get_style_context()->remove_class("urgent");
+    }
+    if ((*it)["target_output"].isString()) {
+      button.get_style_context()->add_class("persistant");
+    } else {
+      button.get_style_context()->remove_class("persistant");
     }
     if (needReorder) {
       box_.reorder_child(button, it - workspaces_.begin());
