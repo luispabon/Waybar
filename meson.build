@@ -1,6 +1,6 @@
 project(
     'waybar', 'cpp', 'c',
-    version: '0.6.9',
+    version: '0.7.0',
     license: 'MIT',
     default_options : [
         'cpp_std=c++17',
@@ -65,6 +65,7 @@ libmpdclient = dependency('libmpdclient', required: get_option('mpd'))
 
 src_files = files(
     'src/factory.cpp',
+    'src/AModule.cpp',
     'src/ALabel.cpp',
     'src/modules/memory.cpp',
     'src/modules/battery.cpp',
