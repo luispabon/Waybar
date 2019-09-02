@@ -1,6 +1,6 @@
 project(
     'waybar', 'cpp', 'c',
-    version: '0.7.2',
+    version: '0.8.0',
     license: 'MIT',
     default_options : [
         'cpp_std=c++17',
@@ -153,7 +153,7 @@ install_data(
     install_dir: join_paths(get_option('out'), 'etc/xdg/waybar')
 )
 
-scdoc = dependency('scdoc', version: '>=1.9.2', native: true, required: false)
+scdoc = dependency('scdoc', version: '>=1.9.2', native: true, required: get_option('man-pages'))
 
 if scdoc.found()
     scdoc_prog = find_program(scdoc.get_pkgconfig_variable('scdoc'), native: true)
