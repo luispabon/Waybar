@@ -2,8 +2,12 @@
 #include <spdlog/spdlog.h>
 #include <sys/eventfd.h>
 #include <fstream>
+#include "util/format.hpp"
+
 
 namespace {
+
+using namespace waybar::util;
 
 constexpr const char *NETSTAT_FILE =
     "/proc/net/netstat";  // std::ifstream does not take std::string_view as param
@@ -98,7 +102,7 @@ waybar::modules::Network::Network(const std::string &id, const Json::Value &conf
 
   createEventSocket();
   createInfoSocket();
-  auto default_iface = getPreferredIface();
+  auto default_iface = getPreferredIface(-1, false);
   if (default_iface != -1) {
     ifid_ = default_iface;
     char ifname[IF_NAMESIZE];
@@ -258,26 +262,6 @@ auto waybar::modules::Network::update() -> void {
     state_ = state;
   }
   getState(signal_strength_);
-
-  auto pow_format = [](unsigned long long value, const std::string &unit) {
-    if (value > 2000ull * 1000ull * 1000ull) {  // > 2G
-      auto go = value / (1000 * 1000 * 1000);
-      return std::to_string(go) + "." +
-             std::to_string((value - go * 1000 * 1000 * 1000) / (100 * 1000 * 1000)) + "G" + unit;
-
-    } else if (value > 2000ull * 1000ull) {  // > 2M
-      auto mo = value / (1000 * 1000);
-      return std::to_string(mo) + "." + std::to_string((value - mo * 1000 * 1000) / (100 * 1000)) +
-             "M" + unit;
-
-    } else if (value > 2000ull) {  // > 2k
-      auto ko = value / 1000;
-      return std::to_string(ko) + "." + std::to_string((value - ko * 1000) / 100) + "k" + unit;
-
-    } else {
-      return std::to_string(value) + unit;
-    }
-  };
 
   auto text = fmt::format(
       format_,
@@ -531,7 +515,7 @@ bool waybar::modules::Network::checkInterface(struct ifinfomsg *rtif, std::strin
   return false;
 }
 
-int waybar::modules::Network::getPreferredIface(int skip_idx) const {
+int waybar::modules::Network::getPreferredIface(int skip_idx, bool wait) const {
   int ifid = -1;
   if (config_["interface"].isString()) {
     ifid = if_nametoindex(config_["interface"].asCString());
@@ -563,7 +547,9 @@ int waybar::modules::Network::getPreferredIface(int skip_idx) const {
     if (ifid > 0) {
       return ifid;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    if (wait) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
   }
   return -1;
 }
@@ -717,8 +703,9 @@ void waybar::modules::Network::parseSignal(struct nlattr **bss) {
     // WiFi-hardware usually operates in the range -90 to -20dBm.
     const int hardwareMax = -20;
     const int hardwareMin = -90;
-    signal_strength_ =
-        ((signal_strength_dbm_ - hardwareMin) / double{hardwareMax - hardwareMin}) * 100;
+    const int strength =
+      ((signal_strength_dbm_ - hardwareMin) / double{hardwareMax - hardwareMin}) * 100;
+    signal_strength_ = std::clamp(strength, 0, 100);
   }
   if (bss[NL80211_BSS_SIGNAL_UNSPEC] != nullptr) {
     signal_strength_ = nla_get_u8(bss[NL80211_BSS_SIGNAL_UNSPEC]);
