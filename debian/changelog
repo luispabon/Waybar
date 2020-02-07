@@ -1,3 +1,9 @@
+waybar (1:0.9.0-luis1~disco) disco; urgency=low
+
+  * New upstream release
+
+ -- Luis Pabon <luis.pabon@auronconsulting.co.uk>  Fri, 07 Feb 2020 09:52:43 +0400
+
 waybar (1:0.8.0-luis1~disco) disco; urgency=low
 
   * New upstream release
