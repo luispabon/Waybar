@@ -82,8 +82,7 @@ libpulse = dependency('libpulse', required: get_option('pulseaudio'))
 libudev = dependency('libudev', required: get_option('libudev'))
 libmpdclient = dependency('libmpdclient', required: get_option('mpd'))
 gtk_layer_shell = dependency('gtk-layer-shell-0',
-        required: get_option('gtk-layer-shell'),
-        fallback : ['gtk-layer-shell', 'gtk_layer_shell_dep'])
+        required: get_option('gtk-layer-shell'))
 systemd = dependency('systemd', required: get_option('systemd'))
 tz_dep = dependency('date', default_options : [ 'use_system_tzdb=true' ], fallback: [ 'date', 'tz_dep' ])
 
