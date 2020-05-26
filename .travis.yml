@@ -1,4 +1,4 @@
-sudo: false
+language: cpp
 
 services:
     - docker
@@ -22,3 +22,16 @@ script:
     - echo ADD . /root >> Dockerfile
     - docker build -t waybar .
     - docker run waybar /bin/sh -c "cd /root && meson build -Dman-pages=enabled && ninja -C build"
+
+jobs:
+  include:
+    - os: freebsd
+      compiler: clang
+      env:
+      before_install:
+        - sudo sed -i '' 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
+        - sudo pkg install -y date gtk-layer-shell gtkmm30 jsoncpp libdbusmenu
+               libfmt libmpdclient libudev-devd meson pulseaudio scdoc spdlog
+      script:
+        - meson build -Dman-pages=enabled
+        - ninja -C build

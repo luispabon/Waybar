@@ -161,7 +161,7 @@ std::tuple<const std::string, const std::string> waybar::Client::getConfigs(
                                           "$XDG_CONFIG_HOME/waybar/config",
                                           "$HOME/.config/waybar/config",
                                           "$HOME/waybar/config",
-                                          "/etc/xdg/waybar/config",
+                                          SYSCONFDIR "/xdg/waybar/config",
                                           "./resources/config",
                                       })
                                     : config;
@@ -169,7 +169,7 @@ std::tuple<const std::string, const std::string> waybar::Client::getConfigs(
                                       "$XDG_CONFIG_HOME/waybar/style.css",
                                       "$HOME/.config/waybar/style.css",
                                       "$HOME/waybar/style.css",
-                                      "/etc/xdg/waybar/style.css",
+                                      SYSCONFDIR "/xdg/waybar/style.css",
                                       "./resources/style.css",
                                   })
                                 : style;
@@ -252,7 +252,7 @@ int waybar::Client::main(int argc, char *argv[]) {
   if (!log_level.empty()) {
     spdlog::set_level(spdlog::level::from_str(log_level));
   }
-  gtk_app = Gtk::Application::create(argc, argv, "fr.arouillard.waybar");
+  gtk_app = Gtk::Application::create(argc, argv, "fr.arouillard.waybar", Gio::APPLICATION_HANDLES_COMMAND_LINE);
   gdk_display = Gdk::Display::get_default();
   if (!gdk_display) {
     throw std::runtime_error("Can't find display");

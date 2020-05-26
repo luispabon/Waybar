@@ -1,22 +1,21 @@
 #include "modules/custom.hpp"
+
 #include <spdlog/spdlog.h>
 
 waybar::modules::Custom::Custom(const std::string& name, const std::string& id,
                                 const Json::Value& config)
     : ALabel(config, "custom-" + name, id, "{}"), name_(name), fp_(nullptr), pid_(-1) {
-  if (config_["exec"].isString()) {
-    if (interval_.count() > 0) {
-      delayWorker();
-    } else {
-      continuousWorker();
-    }
-  }
   dp.emit();
+  if (interval_.count() > 0) {
+    delayWorker();
+  } else if (config_["exec"].isString()) {
+    continuousWorker();
+  }
 }
 
 waybar::modules::Custom::~Custom() {
   if (pid_ != -1) {
-    kill(-pid_, 9);
+    killpg(pid_, SIGTERM);
     pid_ = -1;
   }
 }
@@ -25,14 +24,16 @@ void waybar::modules::Custom::delayWorker() {
   thread_ = [this] {
     bool can_update = true;
     if (config_["exec-if"].isString()) {
-      auto res = util::command::exec(config_["exec-if"].asString());
-      if (res.exit_code != 0) {
+      output_ = util::command::execNoRead(config_["exec-if"].asString());
+      if (output_.exit_code != 0) {
         can_update = false;
-        event_box_.hide();
+        dp.emit();
       }
     }
     if (can_update) {
-      output_ = util::command::exec(config_["exec"].asString());
+      if (config_["exec"].isString()) {
+        output_ = util::command::exec(config_["exec"].asString());
+      }
       dp.emit();
     }
     thread_.sleep_for(interval_);
@@ -46,10 +47,10 @@ void waybar::modules::Custom::continuousWorker() {
   if (!fp_) {
     throw std::runtime_error("Unable to open " + cmd);
   }
-  thread_ = [&] {
+  thread_ = [this, cmd] {
     char*  buff = nullptr;
     size_t len = 0;
-    bool restart = false;
+    bool   restart = false;
     if (getline(&buff, &len, fp_) == -1) {
       int exit_code = 1;
       if (fp_) {
@@ -63,25 +64,26 @@ void waybar::modules::Custom::continuousWorker() {
       }
       if (config_["restart-interval"].isUInt()) {
         restart = true;
+        pid_ = -1;
+        fp_ = util::command::open(cmd, pid_);
+        if (!fp_) {
+          throw std::runtime_error("Unable to open " + cmd);
+        }
       } else {
         thread_.stop();
         return;
       }
-    }
-    std::string output = buff;
+    } else {
+      std::string output = buff;
 
-    // Remove last newline
-    if (!output.empty() && output[output.length() - 1] == '\n') {
-      output.erase(output.length() - 1);
-    }
-    output_ = {0, output};
-    dp.emit();
-    if (restart) {
-      pid_ = -1;
-      fp_ = util::command::open(cmd, pid_);
-      if (!fp_) {
-        throw std::runtime_error("Unable to open " + cmd);
+      // Remove last newline
+      if (!output.empty() && output[output.length() - 1] == '\n') {
+        output.erase(output.length() - 1);
       }
+      output_ = {0, output};
+      dp.emit();
+    }
+    if (restart) {
       thread_.sleep_for(std::chrono::seconds(config_["restart-interval"].asUInt()));
     }
   };
@@ -107,7 +109,8 @@ bool waybar::modules::Custom::handleToggle(GdkEventButton* const& e) {
 
 auto waybar::modules::Custom::update() -> void {
   // Hide label if output is empty
-  if (config_["exec"].isString() && (output_.out.empty() || output_.exit_code != 0)) {
+  if ((config_["exec"].isString() || config_["exec-if"].isString()) &&
+      (output_.out.empty() || output_.exit_code != 0)) {
     event_box_.hide();
   } else {
     if (config_["return-type"].asString() == "json") {

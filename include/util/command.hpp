@@ -1,8 +1,11 @@
 #pragma once
 
 #include <giomm.h>
+#include <spdlog/spdlog.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include <array>
 
 namespace waybar::util::command {
 
@@ -28,20 +31,28 @@ inline std::string read(FILE* fp) {
 }
 
 inline int close(FILE* fp, pid_t pid) {
-  int stat;
+  int stat = -1;
 
   fclose(fp);
-  while (waitpid(pid, &stat, 0) == -1) {
-    if (errno != EINTR) {
-      stat = 0;
+  do {
+    waitpid(pid, &stat, WCONTINUED | WUNTRACED);
+
+    if (WIFEXITED(stat)) {
+      spdlog::debug("Cmd exited with code {}", WEXITSTATUS(stat));
+    } else if (WIFSIGNALED(stat)) {
+      spdlog::debug("Cmd killed by {}", WTERMSIG(stat));
+    } else if (WIFSTOPPED(stat)) {
+      spdlog::debug("Cmd stopped by {}", WSTOPSIG(stat));
+    } else if (WIFCONTINUED(stat)) {
+      spdlog::debug("Cmd continued");
+    } else {
       break;
     }
-  }
-
+  } while (!WIFEXITED(stat) && !WIFSIGNALED(stat));
   return stat;
 }
 
-inline FILE* open(const std::string cmd, int& pid) {
+inline FILE* open(const std::string& cmd, int& pid) {
   if (cmd == "") return nullptr;
   int fd[2];
   pipe(fd);
@@ -49,7 +60,7 @@ inline FILE* open(const std::string cmd, int& pid) {
   pid_t child_pid = fork();
 
   if (child_pid < 0) {
-    printf("Unable to exec cmd %s, error %s", cmd.c_str(), strerror(errno));
+    spdlog::error("Unable to exec cmd {}, error {}", cmd.c_str(), strerror(errno));
     return nullptr;
   }
 
@@ -57,7 +68,7 @@ inline FILE* open(const std::string cmd, int& pid) {
     ::close(fd[0]);
     dup2(fd[1], 1);
     setpgid(child_pid, child_pid);
-    execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)0);
+    execlp("/bin/sh", "sh", "-c", cmd.c_str(), (char*)0);
     exit(0);
   } else {
     ::close(fd[1]);
@@ -66,25 +77,30 @@ inline FILE* open(const std::string cmd, int& pid) {
   return fdopen(fd[0], "r");
 }
 
-inline struct res exec(std::string cmd) {
+inline struct res exec(const std::string& cmd) {
   int  pid;
   auto fp = command::open(cmd, pid);
   if (!fp) return {-1, ""};
   auto output = command::read(fp);
   auto stat = command::close(fp, pid);
-  if (WIFEXITED(stat)) {
-    return {WEXITSTATUS(stat), output};
-  }
-  return {-1, output};
+  return {WEXITSTATUS(stat), output};
 }
 
-inline int32_t forkExec(std::string cmd) {
+inline struct res execNoRead(const std::string& cmd) {
+  int  pid;
+  auto fp = command::open(cmd, pid);
+  if (!fp) return {-1, ""};
+  auto stat = command::close(fp, pid);
+  return {WEXITSTATUS(stat), ""};
+}
+
+inline int32_t forkExec(const std::string& cmd) {
   if (cmd == "") return -1;
 
   int32_t pid = fork();
 
   if (pid < 0) {
-    printf("Unable to exec cmd %s, error %s", cmd.c_str(), strerror(errno));
+    spdlog::error("Unable to exec cmd {}, error {}", cmd.c_str(), strerror(errno));
     return pid;
   }
 
@@ -95,7 +111,7 @@ inline int32_t forkExec(std::string cmd) {
     execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)0);
     exit(0);
   } else {
-    signal(SIGCHLD,SIG_IGN);
+    signal(SIGCHLD, SIG_IGN);
   }
 
   return pid;
