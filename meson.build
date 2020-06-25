@@ -36,7 +36,7 @@ else
     if meson.source_root() == git_path
         git_commit_hash = run_command([git.path(), 'describe', '--always', '--tags']).stdout().strip()
         git_branch = run_command([git.path(), 'rev-parse', '--abbrev-ref', 'HEAD']).stdout().strip()
-        version = '"@0@ (" __DATE__ ", branch \'@1@\')"'.format(git_commit_hash, git_branch)
+        version = '"@0@ (branch \'@1@\')"'.format(git_commit_hash, git_branch)
         add_project_arguments('-DVERSION=@0@'.format(version), language: 'cpp')
     else
         add_project_arguments('-DVERSION="@0@"'.format(meson.project_version()), language: 'cpp')
@@ -154,19 +154,22 @@ elif is_dragonfly or is_freebsd or is_netbsd or is_openbsd
     )
 endif
 
-if true # find_program('sway', required : false).found()
-    add_project_arguments('-DHAVE_SWAY', language: 'cpp')
-    src_files += [
-        'src/modules/sway/ipc/client.cpp',
-        'src/modules/sway/mode.cpp',
-        'src/modules/sway/window.cpp',
-        'src/modules/sway/workspaces.cpp'
-    ]
-endif
+add_project_arguments('-DHAVE_SWAY', language: 'cpp')
+src_files += [
+    'src/modules/sway/ipc/client.cpp',
+    'src/modules/sway/mode.cpp',
+    'src/modules/sway/window.cpp',
+    'src/modules/sway/workspaces.cpp'
+]
 
 if true
     add_project_arguments('-DHAVE_WLR', language: 'cpp')
     src_files += 'src/modules/wlr/taskbar.cpp'
+endif
+
+if true
+    add_project_arguments('-DHAVE_RIVER', language: 'cpp')
+    src_files += 'src/modules/river/tags.cpp'
 endif
 
 if libnl.found() and libnlgen.found()
@@ -258,6 +261,7 @@ if scdoc.found()
         'waybar-mpd.5.scd',
         'waybar-network.5.scd',
         'waybar-pulseaudio.5.scd',
+        'waybar-river-tags.5.scd',
         'waybar-sway-mode.5.scd',
         'waybar-sway-window.5.scd',
         'waybar-sway-workspaces.5.scd',
