@@ -1,6 +1,6 @@
 project(
     'waybar', 'cpp', 'c',
-    version: '0.9.2',
+    version: '0.9.3',
     license: 'MIT',
     default_options : [
         'cpp_std=c++17',
@@ -97,7 +97,7 @@ libmpdclient = dependency('libmpdclient', required: get_option('mpd'))
 gtk_layer_shell = dependency('gtk-layer-shell-0',
         required: get_option('gtk-layer-shell'))
 systemd = dependency('systemd', required: get_option('systemd'))
-tz_dep = dependency('date', default_options : [ 'use_system_tzdb=true' ], fallback: [ 'date', 'tz_dep' ])
+tz_dep = dependency('date', default_options : [ 'use_system_tzdb=true' ], modules : [ 'date::date', 'date::date-tz' ], fallback: [ 'date', 'tz_dep' ])
 
 prefix = get_option('prefix')
 sysconfdir = get_option('sysconfdir')

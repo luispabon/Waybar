@@ -63,20 +63,22 @@ auto waybar::modules::MPD::update() -> void {
 
 std::thread waybar::modules::MPD::event_listener() {
   return std::thread([this] {
-    try {
-      if (connection_ == nullptr) {
-        // Retry periodically if no connection
-        dp.emit();
-        std::this_thread::sleep_for(interval_);
-      } else {
-        waitForEvent();
-        dp.emit();
-      }
-    } catch (const std::exception& e) {
-      if (strcmp(e.what(), "Connection to MPD closed") == 0) {
-        spdlog::debug("{}: {}", module_name_, e.what());
-      } else {
-        spdlog::warn("{}: {}", module_name_, e.what());
+    while (true) {
+      try {
+        if (connection_ == nullptr) {
+          // Retry periodically if no connection
+          dp.emit();
+          std::this_thread::sleep_for(interval_);
+        } else {
+          waitForEvent();
+          dp.emit();
+        }
+      } catch (const std::exception& e) {
+        if (strcmp(e.what(), "Connection to MPD closed") == 0) {
+          spdlog::debug("{}: {}", module_name_, e.what());
+        } else {
+          spdlog::warn("{}: {}", module_name_, e.what());
+        }
       }
     }
   });
@@ -352,7 +354,7 @@ bool waybar::modules::MPD::handlePlayPause(GdkEventButton* const& e) {
 }
 
 bool waybar::modules::MPD::stopped() {
-  return connection_ == nullptr || state_ == MPD_STATE_UNKNOWN || state_ == MPD_STATE_STOP;
+  return connection_ == nullptr || state_ == MPD_STATE_UNKNOWN || state_ == MPD_STATE_STOP || status_ == nullptr;
 }
 
 bool waybar::modules::MPD::playing() { return connection_ != nullptr && state_ == MPD_STATE_PLAY; }
